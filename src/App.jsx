@@ -19,12 +19,19 @@ const App = () => {
   const adoptedPetHook = useState(null);
 
   return (
-    <div>
+    <div
+      className="m-0 p-0"
+      style={{
+        background: 'url(http://pets-images.dev-apis.com/pets/wallpaperC.jpg)',
+      }}
+    >
       <BrowserRouter>
         <QueryClientProvider client={queryClient}>
           <AdoptedPetContext.Provider value={adoptedPetHook}>
-            <header>
-              <Link to="/">Adopt Me!</Link>
+            <header className="mb-10 w-full bg-gradient-to-b from-yellow-400 via-orange-500 to-red-500 p-7 text-center">
+              <Link className="text-6xl text-white hover:text-gray-200" to="/">
+                Adopt Me!
+              </Link>
             </header>
             <Routes>
               <Route path="/details/:id" element={<Details />} />
