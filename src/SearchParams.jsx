@@ -1,9 +1,15 @@
-import { useState, useContext } from 'react';
+import {
+  useContext,
+  useState,
+  useDeferredValue,
+  useMemo,
+  useTransition,
+} from 'react';
 import { useQuery } from '@tanstack/react-query';
-import fetchSearch from './fetchSearch';
 import Results from './Results';
-import useBreedList from './useBreedList';
 import AdoptedPetContext from './AdoptedPetContext';
+import useBreedList from './useBreedList';
+import fetchSearch from './fetchSearch';
 const ANIMALS = ['bird', 'cat', 'dog', 'rabbit', 'reptile'];
 
 const SearchParams = () => {
@@ -12,18 +18,22 @@ const SearchParams = () => {
     animal: '',
     breed: '',
   });
+  const [adoptedPet] = useContext(AdoptedPetContext);
   const [animal, setAnimal] = useState('');
   const [breeds] = useBreedList(animal);
-  // eslint-disable-next-line no-unused-vars
-  const [adoptedPet, _] = useContext(AdoptedPetContext);
+  const [isPending, startTransition] = useTransition();
 
   const results = useQuery(['search', requestParams], fetchSearch);
   const pets = results?.data?.pets ?? [];
+  const defferedPets = useDeferredValue(pets);
+  const renderedPets = useMemo(
+    () => <Results pets={defferedPets}></Results>,
+    [defferedPets]
+  );
 
   return (
-    <div className="my-0 mx-auto w-11/12">
+    <div className="search-params">
       <form
-        className="mb-10 flex flex-col items-center justify-center rounded-lg bg-gray-200 p-10 shadow-lg"
         onSubmit={(e) => {
           e.preventDefault();
           const formData = new FormData(e.target);
@@ -32,7 +42,9 @@ const SearchParams = () => {
             breed: formData.get('breed') ?? '',
             location: formData.get('location') ?? '',
           };
-          setRequestParams(obj);
+          startTransition(() => {
+            setRequestParams(obj);
+          });
         }}
       >
         {adoptedPet ? (
@@ -42,23 +54,18 @@ const SearchParams = () => {
         ) : null}
         <label htmlFor="location">
           Location
-          <input
-            type="text"
-            name="location"
-            id="location"
-            className="search-input"
-            placeholder="Location"
-          />
+          <input id="location" name="location" placeholder="Location" />
         </label>
 
         <label htmlFor="animal">
           Animal
           <select
             id="animal"
-            value={animal}
             name="animal"
-            className="search-input"
             onChange={(e) => {
+              setAnimal(e.target.value);
+            }}
+            onBlur={(e) => {
               setAnimal(e.target.value);
             }}
           >
@@ -73,12 +80,7 @@ const SearchParams = () => {
 
         <label htmlFor="breed">
           Breed
-          <select
-            className="search-input grayed-out-disabled"
-            name="breed"
-            disabled={breeds.length === 0}
-            id="breed"
-          >
+          <select disabled={!breeds.length} id="breed" name="breed">
             <option />
             {breeds.map((breed) => (
               <option key={breed} value={breed}>
@@ -87,11 +89,15 @@ const SearchParams = () => {
             ))}
           </select>
         </label>
-        <button className="rounded border-none bg-orange-500 px-6 py-2 text-white hover:opacity-50">
-          Submit
-        </button>
+        {isPending ? (
+          <div className="mini loading-pane">
+            <h2 className="loader">@</h2>
+          </div>
+        ) : (
+          <button>Submit</button>
+        )}
       </form>
-      <Results pets={pets} />
+      {renderedPets}
     </div>
   );
 };
